@@ -2,7 +2,9 @@ package com.imdb.movieManager.services.impls;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.imdb.movieManager.daos.MovieDAO;
+import com.imdb.movieManager.database.MovieDataBase;
 import com.imdb.movieManager.models.MovieDTO;
+import com.imdb.movieManager.models.UpdateDTO;
 import com.imdb.movieManager.services.MovieService;
 import org.springframework.stereotype.Service;
 
@@ -17,16 +19,8 @@ public class DefaultMovieService implements MovieService {
     @Override
     public MovieDAO addMovie(MovieDTO movieDTO) {
 
-        MovieDAO movieDAO = new MovieDAO();
+        return new MovieDataBase().createMovie(null,movieDTO);
 
-        movieDAO.setMovieName(movieDTO.getMovieName());
-        movieDAO.setMovieGenre(movieDTO.getMovieGenre());
-        movieDAO.setPrimaryLanguage(movieDTO.getPrimaryLanguage());
-        movieDAO.setRating(movieDTO.getRating());
-        movieDAO.setReleasedYear(movieDTO.getReleasedYear());
-        movieDAO.setMovieId(0001L);
-
-        return movieDAO;
     }
 
     private static boolean isPresent(Long movieId){
@@ -44,13 +38,7 @@ public class DefaultMovieService implements MovieService {
 
     @Override
     public MovieDAO updateCompleteMovie(MovieDTO movieDTO, Long movieId) {
-        boolean flag = isPresent(movieId);
-        if(flag){
-            MovieDAO movieDAO = objectMapper.convertValue(movieDTO, MovieDAO.class);
-            return movieDAO;
-
-        }
-        else return null;
+        return new MovieDataBase().updateMovie(movieId, movieDTO);
     }
 
     @Override
@@ -84,5 +72,15 @@ public class DefaultMovieService implements MovieService {
     public List<MovieDAO> getAllMoviesByActor(Long actorId) {
         List<MovieDAO> movieDAOList = new ArrayList<>();
         return movieDAOList;
+    }
+
+    @Override
+    public MovieDAO updateMovieRating(Long movieId, Float rating) {
+        return null;
+    }
+
+    @Override
+    public MovieDAO updateMovieActors(Long movieID, List<Long> actorList) {
+        return null;
     }
 }

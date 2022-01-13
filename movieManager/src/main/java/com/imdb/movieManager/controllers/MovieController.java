@@ -5,11 +5,13 @@ import com.imdb.movieManager.daos.ActorDAO;
 import com.imdb.movieManager.daos.MovieDAO;
 import com.imdb.movieManager.models.ApiResponse;
 import com.imdb.movieManager.models.MovieDTO;
+import com.imdb.movieManager.models.UpdateDTO;
 import com.imdb.movieManager.services.ActorService;
 import com.imdb.movieManager.services.MovieService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -41,7 +43,7 @@ public class MovieController {
         Long movieId = movieDAO.getMovieId();
 
         if(movieId!=null) return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
-        else return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+        else return new ResponseEntity<>(apiResponse, HttpStatus.INTERNAL_SERVER_ERROR);
 
 
     }
@@ -57,19 +59,14 @@ public class MovieController {
     }
 
     @PutMapping("{movieId}")
-    public ResponseEntity<ApiResponse> updateCompleteMovie(@PathVariable("movieId") Long movieId,@RequestBody MovieDTO movieDTO){
+    public ResponseEntity<ApiResponse> updateCompleteMovie(@PathVariable("movieId") Long movieId,
+                                                           @RequestBody @Validated MovieDTO movieDTO){
 
         MovieDAO movieDAO = movieService.updateCompleteMovie(movieDTO, movieId);
 
         ApiResponse apiResponse = new ApiResponse();
-        if(movieDAO!=null){
-            apiResponse.setData(movieDAO);
-            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-        }
-        else {
-            apiResponse.setData("No movie found");
-            return new ResponseEntity<ApiResponse>(apiResponse, HttpStatus.BAD_REQUEST);
-        }
+        apiResponse.setData(movieDAO);
+        return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
     @GetMapping("{genre}")
@@ -130,5 +127,35 @@ public class MovieController {
         apiResponse.setData(movieDTOList);
 
         return ResponseEntity.ok(apiResponse);
+    }
+
+    @PatchMapping("{movieId}")
+    public ResponseEntity<ApiResponse> updateMovieRating(@PathVariable("movieId") Long movieId, @RequestBody UpdateDTO updateDTO){
+
+        Float rating = updateDTO.getRating();
+        if(rating!=null){
+            MovieDAO movieDAO = movieService.updateMovieRating(movieId, rating);
+            ApiResponse apiResponse = new ApiResponse();
+            apiResponse.setData(movieDAO);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+        }
+        return null;
+    }
+
+    @PatchMapping("{movieId}")
+    public ResponseEntity<ApiResponse> updateMovieActors(@PathVariable("movieId") Long movieId, @RequestBody UpdateDTO updateDTO){
+
+        List<Long> actorList = updateDTO.getActors();
+        if(actorList.size()!=0){
+            MovieDAO movieDAO = movieService.updateMovieActors(movieId, actorList);
+            ApiResponse apiResponse = new ApiResponse();
+            apiResponse.setData(movieDAO);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+        }
+        else{
+            //skip
+        }
+
+        return null;
     }
 }
