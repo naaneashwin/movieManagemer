@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.imdb.movieManager.daos.MovieDAO;
 import com.imdb.movieManager.database.MovieDataBase;
 import com.imdb.movieManager.models.MovieDTO;
-import com.imdb.movieManager.models.UpdateDTO;
 import com.imdb.movieManager.services.MovieService;
 import org.springframework.stereotype.Service;
 
@@ -81,6 +80,11 @@ public class DefaultMovieService implements MovieService {
 
     @Override
     public MovieDAO updateMovieActors(Long movieID, List<Long> actorList) {
+        return null;
+    }
+
+    @Override
+    public MovieDAO updateMovieRatingAndActors(Long movieId, Float rating, List<Long> actorList) {
         return null;
     }
 }

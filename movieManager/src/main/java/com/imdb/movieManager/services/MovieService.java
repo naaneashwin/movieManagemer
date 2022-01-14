@@ -26,4 +26,6 @@ public interface MovieService {
     MovieDAO updateMovieRating(Long movieId, Float rating);
 
     MovieDAO updateMovieActors(Long movieID, List<Long> actorList);
+
+    MovieDAO updateMovieRatingAndActors(Long movieId, Float rating, List<Long> actorList);
 }

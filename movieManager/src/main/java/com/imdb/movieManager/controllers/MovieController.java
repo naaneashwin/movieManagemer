@@ -3,7 +3,10 @@ package com.imdb.movieManager.controllers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.imdb.movieManager.daos.ActorDAO;
 import com.imdb.movieManager.daos.MovieDAO;
+import com.imdb.movieManager.exceptions.AuthTokenMissingException;
+import com.imdb.movieManager.exceptions.MovieNameMissingException;
 import com.imdb.movieManager.models.ApiResponse;
+import com.imdb.movieManager.models.ErrorData;
 import com.imdb.movieManager.models.MovieDTO;
 import com.imdb.movieManager.models.UpdateDTO;
 import com.imdb.movieManager.services.ActorService;
@@ -11,9 +14,11 @@ import com.imdb.movieManager.services.MovieService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,11 +35,31 @@ public class MovieController {
     private ActorService actorService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse> addMovie(@RequestBody MovieDTO movieDTO) {
+    public ResponseEntity<ApiResponse> addMovie(@RequestBody MovieDTO movieDTO,
+                                                HttpServletRequest httpServletRequest) throws Exception {
 
-        MovieDAO movieDAO = movieService.addMovie(movieDTO);
+        String authToken = httpServletRequest.getHeader("X-Auth-Token");
 
         ApiResponse apiResponse = new ApiResponse();
+
+        if(!StringUtils.hasText(authToken)){
+            throw new AuthTokenMissingException("Auth Token Missing");
+        }
+
+        String movieName = movieDTO.getMovieName();
+
+//        if(!StringUtils.hasText(movieName)){
+//            ErrorData errorData = new ErrorData();
+//            errorData.setErrorMessage("Movie Name Missing");
+//            errorData.setErrorCode("Err002");
+//            apiResponse.setError(errorData);
+//            return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+//        }
+        if(!StringUtils.hasText(movieName)){
+            throw new MovieNameMissingException("Movie name Missing");
+        }
+
+        MovieDAO movieDAO = movieService.addMovie(movieDTO);
 
         MovieDTO resp = objectMapper.convertValue(movieDAO,MovieDTO.class);
 
@@ -79,7 +104,7 @@ public class MovieController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @GetMapping
+    @GetMapping(params = {"movieGenre", "relasedYear"})
     public ResponseEntity<ApiResponse> getAllMoviesByGenreAndReleasedYear(@RequestParam("movieGenre") String movieGenre,
                                                                          @RequestParam("releasedYear") Integer releasedYear){
 
@@ -101,7 +126,7 @@ public class MovieController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @GetMapping
+    @GetMapping(params = "movieId")
     public ResponseEntity<ApiResponse> getRatingOfMovie(@RequestParam("movieId") Long movieId){
         Float result = movieService.getRatingOfMovie(movieId);
 
@@ -110,7 +135,7 @@ public class MovieController {
         return ResponseEntity.ok(apiResponse);
     }
 
-    @GetMapping()
+    @GetMapping(params = "actorName")
     public ResponseEntity<ApiResponse> getAllMoviesByActor(@RequestParam("actorName") String actorName){
 
         ActorDAO actorDAO = actorService.getActorIdByActorName(actorName);
@@ -130,32 +155,45 @@ public class MovieController {
     }
 
     @PatchMapping("{movieId}")
-    public ResponseEntity<ApiResponse> updateMovieRating(@PathVariable("movieId") Long movieId, @RequestBody UpdateDTO updateDTO){
+    public ResponseEntity<ApiResponse> updateMovieActors(@PathVariable("movieId") Long movieId,
+                                                         @RequestBody UpdateDTO updateDTO,
+                                                         HttpServletRequest httpServletRequest) throws Exception{
 
+        String request = httpServletRequest.getHeader("X-Auth-Token");
+        Integer actorListSize = updateDTO.getActors().size();
         Float rating = updateDTO.getRating();
-        if(rating!=null){
+
+        if(!StringUtils.hasText(request)) throw new AuthTokenMissingException("Auth Token Missing");
+
+        if(rating!=null && actorListSize!=null){
+
+            MovieDAO movieDAO = movieService.updateMovieRatingAndActors(movieId, rating, updateDTO.getActors());
+            ApiResponse apiResponse = new ApiResponse();
+            apiResponse.setData(movieDAO);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+
+        }
+
+        else if(rating!=null){
             MovieDAO movieDAO = movieService.updateMovieRating(movieId, rating);
             ApiResponse apiResponse = new ApiResponse();
             apiResponse.setData(movieDAO);
             return new ResponseEntity<>(apiResponse, HttpStatus.OK);
         }
-        return null;
-    }
-
-    @PatchMapping("{movieId}")
-    public ResponseEntity<ApiResponse> updateMovieActors(@PathVariable("movieId") Long movieId, @RequestBody UpdateDTO updateDTO){
-
-        List<Long> actorList = updateDTO.getActors();
-        if(actorList.size()!=0){
-            MovieDAO movieDAO = movieService.updateMovieActors(movieId, actorList);
+        else if(actorListSize != null){
+            MovieDAO movieDAO = movieService.updateMovieActors(movieId, updateDTO.getActors());
             ApiResponse apiResponse = new ApiResponse();
             apiResponse.setData(movieDAO);
             return new ResponseEntity<>(apiResponse, HttpStatus.OK);
         }
         else{
-            //skip
+            ErrorData errorData = new ErrorData();
+            errorData.setErrorCode("Err004");
+            errorData.setErrorMessage("No Actors added and No rating Modified");
+            ApiResponse apiResponse = new ApiResponse();
+            apiResponse.setError(errorData);
+            return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
         }
 
-        return null;
     }
 }
