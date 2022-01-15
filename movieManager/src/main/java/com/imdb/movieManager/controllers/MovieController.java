@@ -1,5 +1,6 @@
 package com.imdb.movieManager.controllers;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.imdb.movieManager.daos.ActorDAO;
 import com.imdb.movieManager.daos.MovieDAO;
@@ -18,6 +19,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,15 +31,25 @@ public class MovieController {
 
     private ObjectMapper objectMapper= new ObjectMapper();
 
+
+
     @Autowired
     private MovieService movieService;
 
     @Autowired
     private ActorService actorService;
 
+    @PostConstruct
+    private void init (){
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+
+
     @PostMapping
     public ResponseEntity<ApiResponse> addMovie(@RequestBody MovieDTO movieDTO,
                                                 HttpServletRequest httpServletRequest) throws Exception {
+
+
 
         String authToken = httpServletRequest.getHeader("X-Auth-Token");
 
@@ -85,16 +98,18 @@ public class MovieController {
 
     @PutMapping("{movieId}")
     public ResponseEntity<ApiResponse> updateCompleteMovie(@PathVariable("movieId") Long movieId,
-                                                           @RequestBody @Validated MovieDTO movieDTO){
+                                                           @RequestBody MovieDTO movieDTO){
 
         MovieDAO movieDAO = movieService.updateCompleteMovie(movieDTO, movieId);
 
+        MovieDTO movieDTO1 = objectMapper.convertValue(movieDAO, MovieDTO.class);
+
         ApiResponse apiResponse = new ApiResponse();
-        apiResponse.setData(movieDAO);
+        apiResponse.setData(movieDTO1);
         return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
-    @GetMapping("{genre}")
+    @GetMapping("{movieGenre}")
     public ResponseEntity<ApiResponse> getAllMoviesByGenre(@PathVariable("movieGenre") String movieGenre){
         List<String> movieList = movieService.getAllMoviesByGenre(movieGenre);
 
@@ -104,7 +119,7 @@ public class MovieController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @GetMapping(params = {"movieGenre", "relasedYear"})
+    @GetMapping(params = {"movieGenre", "releasedYear"})
     public ResponseEntity<ApiResponse> getAllMoviesByGenreAndReleasedYear(@RequestParam("movieGenre") String movieGenre,
                                                                          @RequestParam("releasedYear") Integer releasedYear){
 
@@ -116,8 +131,8 @@ public class MovieController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @GetMapping("{rating}")
-    public ResponseEntity<ApiResponse> getAllMoviesBasedOnRating(@PathVariable("rating") Float rating){
+    @GetMapping(params = "rating")
+    public ResponseEntity<ApiResponse> getAllMoviesBasedOnRating(@RequestParam("rating") Float rating){
         List<String> movieList = movieService.getAllMoviesBasedOnRating(rating);
 
         ApiResponse apiResponse = new ApiResponse();
